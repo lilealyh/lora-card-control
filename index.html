@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoRa Card 控制面板</title>
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(circle at 0% 0%, rgba(79, 172, 254, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(0, 242, 254, 0.15) 0%, transparent 50%);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--error);
+            box-shadow: 0 0 10px var(--error);
+        }
+
+        .status-dot.connected {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+            flex: 1;
+        }
+
+        .panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        label,
+        .label-text {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            display: block;
+        }
+
+        input,
+        select,
+        textarea {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.625rem;
+            color: var(--text);
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--primary);
+        }
+
+        input:disabled,
+        select:disabled,
+        textarea:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--text-dim);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--text-dim);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+            position: relative;
+        }
+
+        .refresh-icon {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-dim);
+            font-size: 0.7rem;
+            transition: all 0.2s;
+        }
+
+        .refresh-icon:hover {
+            background: var(--primary);
+            color: #000;
+            transform: rotate(180deg);
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 1rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            color: var(--text-dim);
+            font-weight: 600;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .log-container {
+            flex: 1;
+            background: #000;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 0.75rem;
+            overflow-y: auto;
+            max-height: 400px;
+            border: 1px solid var(--border);
+        }
+
+        /* 自定义滚动条样式 */
+        .log-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .log-container::-webkit-scrollbar-thumb:hover {
+            background: var(--text-dim);
+        }
+
+        .log-entry {
+            margin-bottom: 0.25rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .log-time {
+            color: #64748b;
+        }
+
+        .log-dir-in {
+            color: var(--success);
+        }
+
+        .log-dir-out {
+            color: var(--secondary);
+        }
+
+        .log-data {
+            word-break: break-all;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .control-group {
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .control-group-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-dim);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .panel {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>LoRa Card 控制面板</h1>
+        <div class="status-badge">
+            <div id="statusDot" class="status-dot"></div>
+            <span id="statusText">未连接</span>
+        </div>
+    </header>
+
+    <main>
+        <aside class="panel">
+            <div class="panel-title">串口设置</div>
+            <div class="form-group">
+                <label for="baudRate">波特率</label>
+                <select id="baudRate">
+                    <option value="9600">9600</option>
+                    <option value="115200" selected>115200</option>
+                    <option value="921600">921600</option>
+                </select>
+            </div>
+            <button id="connectBtn" class="btn btn-primary">连接设备</button>
+
+            <div class="panel-title" style="margin-top: 1rem;">系统概览</div>
+            <div class="dashboard">
+                <div class="stat-card">
+                    <div class="stat-label">硬件版本</div>
+                    <div id="valHardVer" class="stat-value">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">APP 版本</div>
+                    <div id="valAppVer" class="stat-value">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">系统状态</div>
+                    <div id="valSysStatus" class="stat-value">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">连接状态</div>
+                    <div id="valLink" class="stat-value">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">RSSI</div>
+                    <div id="valRSSI" class="stat-value">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">激活状态</div>
+                    <div id="valAct" class="stat-value">--</div>
+                </div>
+            </div>
+            <button id="refreshAllBtn" class="btn btn-outline" style="margin-top: 1rem;">刷新所有状态</button>
+        </aside>
+
+        <section class="panel">
+            <div class="tabs">
+                <div class="tab active" data-tab="rf">RF 配置</div>
+                <div class="tab" data-tab="device">设备信息</div>
+                <div class="tab" data-tab="test">工厂与测试</div>
+                <div class="tab" data-tab="cert">认证模式</div>
+                <div class="tab" data-tab="forward">数据透传</div>
+                <div class="tab" data-tab="ota">OTA 升级</div>
+                <div class="tab" data-tab="log">通信日志</div>
+            </div>
+
+            <!-- RF Config Tab -->
+            <div id="rfTab" class="tab-content active">
+                <div class="grid-2">
+                    <div class="control-group">
+                        <div class="control-group-title">发射与频率</div>
+                        <div class="form-group">
+                            <label for="rfPower">发射功率 (dBm)</label>
+                            <input type="number" id="rfPower" value="22">
+                        </div>
+                        <div class="form-group" style="margin-top: 0.5rem;">
+                            <label for="rfSF">扩频因子 (SF)</label>
+                            <input type="number" id="rfSF" value="9">
+                        </div>
+                        <div class="form-group" style="margin-top: 0.5rem;">
+                            <label for="rfFreqRX">接收频率 (RX) MHz</label>
+                            <input type="number" id="rfFreqRX" step="0.001" value="2400.000">
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-group-title">发射频率 (MHz)</div>
+                        <div class="form-group">
+                            <label for="rfFreqTX0">发射频率 0 (TX0)</label>
+                            <input type="number" id="rfFreqTX0" step="0.001" value="2400.000">
+                        </div>
+                        <div class="form-group" style="margin-top: 0.5rem;">
+                            <label for="rfFreqTX1">发射频率 1 (TX1)</label>
+                            <input type="number" id="rfFreqTX1" step="0.001" value="2400.000">
+                        </div>
+                        <div class="form-group" style="margin-top: 0.5rem;">
+                            <label for="rfNet">网络 ID</label>
+                            <input type="number" id="rfNet" value="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="control-group">
+                        <div class="control-group-title">子卡信息</div>
+                        <div class="form-group">
+                            <label for="rfAntenna">天线选择</label>
+                            <select id="rfAntenna">
+                                <option value="0">板载天线</option>
+                                <option value="1">IPEX 外接</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-top: 0.5rem;">
+                            <label for="rfPeriod">发送间隔 (100ms)</label>
+                            <input type="number" id="rfPeriod" value="10">
+                        </div>
+                        <div class="form-group" style="margin-top: 0.5rem;">
+                            <label for="rfType">设备类型</label>
+                            <input type="number" id="rfType" value="0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 1rem; justify-content: flex-end;">
+                        <button id="readRFBtn" class="btn btn-outline">读取 RF 配置</button>
+                        <button id="saveRFBtn" class="btn btn-primary">保存 RF 配置</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Device Info Tab -->
+            <div id="deviceTab" class="tab-content">
+                <div class="grid-2">
+                    <div class="control-group">
+                        <div class="control-group-title">工厂标识</div>
+                        <div class="form-group">
+                            <label for="devMAC">MAC 地址 (Hex)</label>
+                            <input type="text" id="devMAC" placeholder="00000000">
+                        </div>
+                        <div class="form-group" style="margin-top: 0.5rem;">
+                            <label for="devSN">序列号 (SN)</label>
+                            <input type="text" id="devSN" maxlength="15">
+                        </div>
+                        <div class="form-group" style="margin-top: 0.5rem;">
+                            <label for="devUID">UID (读取)</label>
+                            <input type="text" id="devUID" readonly>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-group-title">设备功能</div>
+                        <div class="form-group">
+                            <span class="label-text">功能开关 (Reg/Call/SecLink)</span>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <label for="funReg"
+                                    style="display: flex; align-items: center; gap: 0.2rem; text-transform: none;">
+                                    <input type="checkbox" id="funReg"> Reg
+                                </label>
+                                <label for="funCall"
+                                    style="display: flex; align-items: center; gap: 0.2rem; text-transform: none;">
+                                    <input type="checkbox" id="funCall"> Call
+                                </label>
+                                <label for="funSecLink"
+                                    style="display: flex; align-items: center; gap: 0.2rem; text-transform: none;">
+                                    <input type="checkbox" id="funSecLink"> SecLink
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 0.5rem;">
+                            <label for="funElevMode">电梯控制模式</label>
+                            <select id="funElevMode">
+                                <option value="0">Mode 0</option>
+                                <option value="1">Mode 1</option>
+                                <option value="2">Mode 2</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-top: 0.5rem;">
+                            <label for="devActSet">激活状态</label>
+                            <select id="devActSet">
+                                <option value="0">未激活</option>
+                                <option value="1">已激活</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button id="readDevBtn" class="btn btn-outline" style="flex: 1;">读取设备/工厂配置</button>
+                    <button id="saveDevBtn" class="btn btn-primary" style="flex: 1;">保存设备/工厂配置</button>
+                    <button id="resetBtn" class="btn btn-outline"
+                        style="color: var(--error); border-color: var(--error);">系统复位</button>
+                    <button id="dfuBtn" class="btn btn-outline"
+                        style="color: var(--warning); border-color: var(--warning);">进入 DFU</button>
+                </div>
+            </div>
+
+            <!-- Test Tab -->
+            <div id="testTab" class="tab-content">
+                <div class="grid-2">
+                    <div class="control-group">
+                        <div class="control-group-title">工厂测试模式</div>
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                            <button id="enterFtyBtn" class="btn btn-outline" style="flex: 1;">进入工厂模式</button>
+                            <button id="exitFtyBtn" class="btn btn-outline" style="flex: 1;">退出工厂模式</button>
+                        </div>
+                        <div class="form-group">
+                            <span class="label-text">LED 控制</span>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button id="ledOnBtn" class="btn btn-outline led-btn" data-led="0" style="flex: 1;">LED
+                                    ON</button>
+                                <button id="ledOffBtn" class="btn btn-outline led-btn-off" style="flex: 1;">LED
+                                    OFF</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-group-title">链路测试 (Link Test)</div>
+                        <div class="form-group">
+                            <label for="ltSlaveAddr">Slave Addr (Hex/0 for all)</label>
+                            <input type="text" id="ltSlaveAddr" value="00000000">
+                        </div>
+                        <div class="grid-2" style="margin-top:0.5rem;">
+                            <button id="ltStartBtn" class="btn btn-primary">开始测试</button>
+                            <button id="ltStopBtn" class="btn btn-outline">停止测试</button>
+                        </div>
+                        <div id="ltResult" style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-dim);">
+                            等待测试...
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="control-group">
+                        <div class="control-group-title">性能/信号测试</div>
+                        <div style="display: flex; gap: 1rem;">
+                            <button id="perfStartBtn" class="btn btn-outline" style="flex: 1;">开启性能测试</button>
+                            <button id="perfStopBtn" class="btn btn-outline" style="flex: 1;">关闭性能测试</button>
+                        </div>
+                        <div id="perfResult" style="margin-top: 1rem; font-size: 0.75rem; color: var(--text-dim);">
+                            速率: -- | PktCnt: -- | RxPktCnt: --
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <div class="control-group-title">工厂测试数据</div>
+                        <div id="ftyData" style="font-size: 0.75rem; color: var(--text-dim); line-height: 1.4;">
+                            等待数据...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Certification Tab -->
+            <div id="certTab" class="tab-content">
+                <div class="control-group">
+                    <div class="control-group-title">认证模式 (Certification Mode)</div>
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label for="certRole">模式</label>
+                            <select id="certRole">
+                                <option value="0">Slave (接收)</option>
+                                <option value="1">Master (发送)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="certType">测试类型</label>
+                            <select id="certType">
+                                <option value="1">连续载波 (CW)</option>
+                                <option value="2">跳频 (Hopping)</option>
+                                <option value="3">持续接收 (RX)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="certCarrier">单载波/调制</label>
+                            <select id="certCarrier">
+                                <option value="1">单载波</option>
+                                <option value="0">调制</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid-3" style="margin-top: 0.5rem;">
+                        <div class="form-group">
+                            <label for="certFreq">频率 (MHz)</label>
+                            <input type="number" id="certFreq" value="2400">
+                        </div>
+                        <div class="form-group">
+                            <label for="certPower">功率 (dBm)</label>
+                            <input type="number" id="certPower" value="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="certPeriod">周期 (ms)</label>
+                            <input type="number" id="certPeriod" value="1000">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button id="certStartBtn" class="btn btn-primary" style="flex: 1;">开启认证模式</button>
+                        <button id="certStopBtn" class="btn btn-outline" style="flex: 1;">关闭认证模式</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Forwarding Tab -->
+            <div id="forwardTab" class="tab-content">
+                <div class="control-group">
+                    <div class="control-group-title">指令直接发送 (透传测试)</div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="fwdCmdId">指令 ID (Hex)</label>
+                            <select id="fwdCmdId">
+                                <option value="20">Robot Data (0x20)</option>
+                                <option value="25">Custom Data (0x25)</option>
+                                <option value="2A">Elevator Ctrl (0x2A)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fwdType">格式</label>
+                            <select id="fwdType">
+                                <option value="hex">Hex</option>
+                                <option value="str">String</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label for="fwdData">发送内容</label>
+                        <textarea id="fwdData" rows="4" placeholder="例如: AA BB CC 或 Hello"></textarea>
+                    </div>
+                    <button id="fwdSendBtn" class="btn btn-primary" style="margin-top: 1rem; width: 100%;">发送数据</button>
+                </div>
+            </div>
+
+            <!-- OTA Tab -->
+            <div id="otaTab" class="tab-content">
+                <div class="control-group">
+                    <div class="control-group-title">OTA 固件升级</div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="otaFile">选择本地固件 (.bin)</label>
+                            <input type="file" id="otaFile" accept=".bin">
+                        </div>
+                        <div class="form-group">
+                            <label for="otaUrl">或从 GitHub 下载 (URL)</label>
+                            <input type="text" id="otaUrl" placeholder="https://.../firmware.bin">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button id="otaStartBtn" class="btn btn-primary" style="flex: 1;">开始升级</button>
+                        <button id="otaDownloadBtn" class="btn btn-outline" style="flex: 1;">下载并升级</button>
+                    </div>
+
+                    <div id="otaStatusContainer" style="margin-top: 1.5rem; display: none;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span id="otaStatusText" style="font-size: 0.875rem; color: var(--primary);">等待开始...</span>
+                            <span id="otaProgressText" style="font-size: 0.875rem; color: var(--text-dim);">0%</span>
+                        </div>
+                        <div
+                            style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+                            <div id="otaProgressBar"
+                                style="width: 0%; height: 100%; background: linear-gradient(to right, var(--primary), var(--secondary)); transition: width 0.3s;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group" style="margin-top: 1rem;">
+                    <div class="control-group-title">升级说明</div>
+                    <ul style="font-size: 0.75rem; color: var(--text-dim); padding-left: 1.2rem; line-height: 1.6;">
+                        <li>确保设备已进入 DFU 模式。</li>
+                        <li>升级过程中请勿断开串口连接或给设备断电。</li>
+                        <li>GitHub URL 必须是固件二进制文件的直接下载链接。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Communication Log Tab -->
+            <div id="logTab" class="tab-content">
+                <div class="log-container" id="logContainer"></div>
+                <button id="clearLogBtn" class="btn btn-outline" style="align-self: flex-end;">清除日志</button>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>
